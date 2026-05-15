@@ -72,9 +72,43 @@ function NavItems({ items }: { items: typeof landlordNav }) {
   )
 }
 
+function SidebarSkeleton() {
+  return (
+    <Sidebar>
+      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
+        <span className="text-lg font-black tracking-tight text-sidebar-primary">Caushun</span>
+      </SidebarHeader>
+      <SidebarContent className="px-2 py-3">
+        <SidebarGroup>
+          <Skeleton className="h-3 w-16 mx-2 mb-3" />
+          <div className="space-y-1 px-1">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full rounded-lg" />
+            ))}
+          </div>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="px-2 py-3 border-t border-sidebar-border space-y-1">
+        <Skeleton className="h-9 w-full rounded-lg" />
+        <div className="flex items-center gap-3 px-2 py-2">
+          <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-2.5 w-16" />
+          </div>
+          <Skeleton className="h-4 w-10 rounded" />
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
+
 export function AppSidebar() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const pathname = usePathname()
+
+  if (status === "loading") return <SidebarSkeleton />
+
   const role = session?.user?.role
   const navItems = role === "landlord" ? landlordNav : role === "tenant" ? tenantNav : adminNav
   const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : "Admin"
