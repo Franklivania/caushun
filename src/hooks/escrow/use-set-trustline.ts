@@ -14,8 +14,10 @@ export function useSetTrustline() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signer }),
       })
-      const json = (await res.json()) as ApiResponse<{ unsignedTransaction: string }>
+      const json = (await res.json()) as ApiResponse<{ unsignedTransaction: string | null }>
       if (json.status === "error") throw new Error(json.message)
+      // null means trustline is already set — nothing to sign
+      if (!json.data.unsignedTransaction) return
 
       const signedXdr = await signTransaction({
         unsignedTransaction: json.data.unsignedTransaction,

@@ -104,6 +104,7 @@ export default async function LandlordOverviewPage() {
       <PageHeader
         title="Overview"
         description="Your properties and escrow snapshot"
+        breadcrumbs={[{ label: "Landlord" }, { label: "Overview" }]}
         actions={
           <Link href="/landlord/properties">
             <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">

@@ -46,6 +46,9 @@ async function RoomsTable({
       status: r.status,
       escrowStatus: latest?.escrowStatus ?? null,
       tenantName: latest?.tenant?.fullName ?? latest?.tenant?.name ?? null,
+      tenantWallet: latest?.tenant?.walletAddress ?? null,
+      tenancyId: latest?.id ?? null,
+      contractId: latest?.escrowId ?? null,
     }
   })
 
@@ -86,7 +89,10 @@ export default async function PropertyDetailPage({
       <PageHeader
         title={property.name}
         description={`${property.address} · ${property.state}`}
-        backHref="/landlord/properties"
+        breadcrumbs={[
+          { label: "Properties", href: "/landlord/properties" },
+          { label: property.name },
+        ]}
         actions={<CreateRoomDialog propertyId={propertyId} />}
       />
 

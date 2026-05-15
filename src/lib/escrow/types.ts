@@ -63,7 +63,6 @@ export interface ApproveMilestonePayload {
 
 export interface DisputeEscrowPayload {
   contractId: string
-  milestoneIndex: string
   signer: string
 }
 
@@ -80,7 +79,6 @@ export interface Distribution {
 export interface ResolveDisputePayload {
   contractId: string
   disputeResolver: string
-  milestoneIndex: string
   distributions: Distribution[]
 }
 

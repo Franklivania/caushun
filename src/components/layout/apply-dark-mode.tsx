@@ -4,7 +4,9 @@ import { useEffect } from "react"
 
 export function ApplyDarkMode() {
   useEffect(() => {
-    document.documentElement.classList.add("dark")
+    const stored = localStorage.getItem("caushun-theme")
+    const isDark = stored === null ? true : stored === "dark"
+    document.documentElement.classList.toggle("dark", isDark)
     return () => {
       document.documentElement.classList.remove("dark")
     }

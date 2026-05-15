@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { PhotoUploader } from "@/components/photos/photo-uploader"
 import { useCheckout } from "@/hooks/escrow/use-checkout"
+import { toast } from "sonner"
 
 export function CheckoutForm({
   contractId,
@@ -11,7 +13,6 @@ export function CheckoutForm({
   tenantWallet,
   tenantId,
   roomCode,
-  depositAmount,
 }: {
   contractId: string
   tenancyId: string
@@ -20,56 +21,52 @@ export function CheckoutForm({
   roomCode: string
   depositAmount: number
 }) {
+  const router = useRouter()
   const [photos, setPhotos] = useState<string[]>([])
-  const [tenantPct, setTenantPct] = useState(100)
   const checkout = useCheckout()
-  const tenantAmount = (depositAmount * tenantPct) / 100
+
+  function handleCheckout() {
+    const id = toast.loading("Requesting checkout…")
+    checkout.mutate(
+      {
+        contractId,
+        tenancyId,
+        tenantWallet,
+        moveOutPhotoUrls: photos,
+        tenantPct: 100,
+      },
+      {
+        onSuccess: () => { toast.success("Checkout requested", { id }); router.refresh() },
+        onError: (e) => toast.error(e.message, { id }),
+      }
+    )
+  }
 
   return (
-    <div className="rounded-lg border border-slate/60 bg-slate p-5">
-      <h2 className="text-xl font-medium">Request checkout</h2>
-      <div className="mt-4">
-        <PhotoUploader
-          tenancyId={tenancyId}
-          roomCode={roomCode}
-          phase="move_out"
-          uploaderId={tenantId}
-          onUploaded={setPhotos}
-        />
-      </div>
-      <label className="mt-5 block text-sm text-white">
-        How much should be returned to you?
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={tenantPct}
-          onChange={(event) => setTenantPct(Number(event.target.value))}
-          className="mt-3 h-2 w-full accent-forest"
-        />
-      </label>
-      <p className="mt-3 text-[28px] font-semibold text-white">
-        {tenantPct}% - {tenantAmount.toFixed(2)} USDC
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Upload photos of the room as you&apos;re leaving. Try to match the same angles as the
+        move-in photos — these are compared side by side if a dispute is raised.
       </p>
-      <p className="text-[13px] text-ash">
-        {100 - tenantPct}% - {(depositAmount - tenantAmount).toFixed(2)} USDC goes to landlord
-      </p>
-      {checkout.error && <p className="mt-3 text-sm text-red-300">{checkout.error.message}</p>}
+      <PhotoUploader
+        tenancyId={tenancyId}
+        roomCode={roomCode}
+        phase="move_out"
+        uploaderId={tenantId}
+        onUploaded={setPhotos}
+      />
       <Button
-        className="mt-5"
+        onClick={handleCheckout}
         disabled={checkout.isPending || photos.length === 0}
-        onClick={() =>
-          checkout.mutate({
-            contractId,
-            tenancyId,
-            tenantWallet,
-            moveOutPhotoUrls: photos,
-            tenantPct,
-          })
-        }
+        className="w-full"
       >
-        {checkout.isPending ? "Transaction pending..." : "Request checkout"}
+        {checkout.isPending ? "Submitting…" : "Request checkout"}
       </Button>
+      {photos.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center">
+          At least one photo is required before submitting.
+        </p>
+      )}
     </div>
   )
 }

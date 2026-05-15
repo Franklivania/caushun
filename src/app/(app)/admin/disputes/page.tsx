@@ -3,50 +3,50 @@ import { redirect } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
 import { DataTable } from "@/components/data-table/data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
-import { disputeColumns } from "@/components/admin/dispute-columns"
+import { disputeColumns, type DisputeRow } from "@/components/admin/dispute-columns"
 import { Suspense } from "react"
 import { db } from "@/db"
-import { disputes } from "@/db/schema"
-import { count, desc } from "drizzle-orm"
+import { tenancies } from "@/db/schema"
+import { eq, desc } from "drizzle-orm"
 
 async function DisputesTable({ page, pageSize }: { page: number; pageSize: number }) {
-  const offset = (page - 1) * pageSize
-
-  const [[{ total }], data] = await Promise.all([
-    db.select({ total: count() }).from(disputes),
-    db.query.disputes.findMany({
-      orderBy: [desc(disputes.createdAt)],
-      limit: pageSize,
-      offset,
-      with: {
-        tenancy: {
-          with: {
-            room: { with: { property: { with: { landlord: true } } } },
-            tenant: true,
-          },
-        },
-        raisedByUser: true,
+  const disputed = await db.query.tenancies.findMany({
+    where: eq(tenancies.escrowStatus, "disputed"),
+    orderBy: [desc(tenancies.createdAt)],
+    with: {
+      room: { with: { property: { with: { landlord: true } } } },
+      tenant: true,
+      disputes: {
+        orderBy: (d, { desc: descFn }) => [descFn(d.createdAt)],
+        limit: 1,
       },
-    }),
-  ])
+    },
+  })
 
-  const rows = data.map((d) => ({
-    id: d.id,
-    roomCode: d.tenancy.room.uniqueCode,
-    reason: d.reason,
-    tenantName: d.tenancy.tenant?.fullName ?? d.tenancy.tenant?.name ?? null,
-    landlordWallet: d.tenancy.room.property.landlord?.walletAddress ?? null,
-    raisedAt: d.createdAt,
-    resolved: d.resolvedAt !== null,
+  const rows: DisputeRow[] = disputed.map((t) => ({
+    tenancyId: t.id,
+    disputeId: t.disputes[0]?.id ?? null,
+    roomCode: t.room.uniqueCode,
+    propertyName: t.room.property.name,
+    reason: t.disputes[0]?.reason ?? "No reason recorded",
+    tenantName: t.tenant?.fullName ?? t.tenant?.name ?? null,
+    landlordName:
+      t.room.property.landlord?.fullName ?? t.room.property.landlord?.name ?? null,
+    raisedAt: t.disputes[0]?.createdAt ?? t.createdAt,
+    resolved: false,
   }))
+
+  const total = rows.length
+  const offset = (page - 1) * pageSize
+  const paged = rows.slice(offset, offset + pageSize)
 
   return (
     <DataTable
       columns={disputeColumns}
-      data={rows}
+      data={paged}
       page={page}
       pageSize={pageSize}
-      pageCount={Math.ceil(total / pageSize)}
+      pageCount={Math.max(1, Math.ceil(total / pageSize))}
       total={total}
     />
   )
@@ -66,8 +66,12 @@ export default async function AdminDisputesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Disputes" description="All raised disputes" />
-      <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>
+      <PageHeader
+        title="Disputes"
+        description="All disputed tenancies — click Resolve to mediate"
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Disputes" }]}
+      />
+      <Suspense fallback={<TableSkeleton columns={7} rows={pageSize} />}>
         <DisputesTable page={page} pageSize={pageSize} />
       </Suspense>
     </div>

@@ -61,7 +61,7 @@ export default async function AdminTenanciesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Tenancies" description="All room tenancies across the platform" />
+      <PageHeader title="Tenancies" description="All room tenancies across the platform" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Tenancies" }]} />
       <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>
         <TenanciesTable page={page} pageSize={pageSize} />
       </Suspense>

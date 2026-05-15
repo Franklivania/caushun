@@ -1,134 +1,128 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
-import { Suspense } from "react"
 import { db } from "@/db"
 import { tenancies } from "@/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { Card, CardContent } from "@/components/ui/card"
-import { EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
-import { StatCardSkeleton } from "@/components/skeletons/stat-card-skeleton"
+import { RoomStatusBadge, EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
+import { BedDouble, ArrowRight } from "lucide-react"
 import Link from "next/link"
-import { BedDouble, Wallet, Calendar, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-
-async function TenantOverview({ userId }: { userId: string }) {
-  const activeTenancy = await db.query.tenancies.findFirst({
-    where: eq(tenancies.tenantId, userId),
-    orderBy: [desc(tenancies.createdAt)],
-    with: {
-      room: { with: { property: true } },
-      tenant: true,
-    },
-  })
-
-  if (!activeTenancy) {
-    return (
-      <Card className="border-border">
-        <CardContent className="py-16 text-center">
-          <BedDouble className="mx-auto mb-4 size-10 text-muted-foreground/40" />
-          <h2 className="text-lg font-semibold">No active tenancy</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Ask your landlord for an invite link to get started.
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const deposit = Number(activeTenancy.room.depositAmount)
-  const moveIn = new Date(activeTenancy.moveInDate)
-  const daysIn = Math.floor((Date.now() - moveIn.getTime()) / (1000 * 60 * 60 * 24))
-
-  return (
-    <div className="space-y-6">
-      <div className="grid sm:grid-cols-3 gap-4">
-        <Card className="border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center justify-center size-9 rounded-lg bg-primary/10">
-                <Wallet size={18} className="text-primary" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deposit</p>
-            </div>
-            <p className="text-2xl font-bold">{deposit.toFixed(0)} USDC</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center justify-center size-9 rounded-lg bg-primary/10">
-                <BedDouble size={18} className="text-primary" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room</p>
-            </div>
-            <p className="text-2xl font-bold font-mono">{activeTenancy.room.uniqueCode}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{activeTenancy.room.property.name}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center justify-center size-9 rounded-lg bg-primary/10">
-                <Calendar size={18} className="text-primary" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Days in</p>
-            </div>
-            <p className="text-2xl font-bold">{daysIn}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Since {moveIn.toLocaleDateString()}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-border">
-        <CardContent className="p-5 flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold">{activeTenancy.room.property.name}</p>
-              <EscrowStatusBadge status={activeTenancy.escrowStatus} />
-            </div>
-            <p className="text-sm text-muted-foreground">{activeTenancy.room.property.address}</p>
-            {activeTenancy.escrowId && (
-              <p className="text-[11px] font-mono text-muted-foreground/60">
-                {activeTenancy.escrowId.slice(0, 12)}…
-              </p>
-            )}
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Link href="/tenant/room">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                Room <ArrowRight size={13} />
-              </Button>
-            </Link>
-            <Link href="/tenant/escrow">
-              <Button size="sm" className="gap-1.5">
-                Escrow <ArrowRight size={13} />
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+import { JoinRoomDialog } from "@/components/tenant/join-room-dialog"
 
 export default async function TenantPage() {
   const session = await auth()
   if (!session?.user?.id) redirect("/auth")
 
+  const allTenancies = await db.query.tenancies.findMany({
+    where: eq(tenancies.tenantId, session.user.id),
+    orderBy: [desc(tenancies.createdAt)],
+    with: {
+      room: { with: { property: true } },
+    },
+  })
+
+  if (allTenancies.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="My Rooms"
+          description="All rooms you are or have been a tenant in"
+          breadcrumbs={[{ label: "Tenant" }, { label: "My Rooms" }]}
+          actions={<JoinRoomDialog />}
+        />
+        <Card className="border-border">
+          <CardContent className="py-16 text-center">
+            <BedDouble className="mx-auto mb-4 size-10 text-muted-foreground/40" />
+            <h2 className="text-lg font-semibold">No rooms yet</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ask your landlord for an invite link to join a room.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const activeCount = allTenancies.filter((t) => t.escrowStatus !== "resolved").length
+  const totalLocked = allTenancies
+    .filter((t) => t.escrowStatus !== "resolved")
+    .reduce((sum, t) => sum + Number(t.room.depositAmount), 0)
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Dashboard"
-        description="Track your deposit and manage your tenancy"
+        title="My Rooms"
+        description="All rooms you are or have been a tenant in"
+        breadcrumbs={[{ label: "Tenant" }, { label: "My Rooms" }]}
+        actions={<JoinRoomDialog />}
       />
-      <Suspense fallback={<StatCardSkeleton count={3} />}>
-        <TenantOverview userId={session.user.id} />
-      </Suspense>
+
+      <div className="grid sm:grid-cols-3 gap-4">
+        {[
+          { label: "Total rooms", value: String(allTenancies.length) },
+          { label: "Active tenancies", value: String(activeCount) },
+          { label: "USDC locked", value: `${totalLocked.toFixed(0)} USDC` },
+        ].map(({ label, value }) => (
+          <Card key={label} className="border-border">
+            <CardContent className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                {label}
+              </p>
+              <p className="text-2xl font-bold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {allTenancies.map((tenancy) => (
+          <Link
+            key={tenancy.id}
+            href={`/tenant/rooms/${tenancy.id}`}
+            className="group block"
+          >
+            <Card className="border-border h-full transition-colors hover:border-primary/40 hover:bg-muted/30">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-mono font-semibold text-base leading-tight">
+                      {tenancy.room.uniqueCode}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {tenancy.room.property.name}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/60 truncate max-w-45">
+                      {tenancy.room.property.address}
+                    </p>
+                  </div>
+                  <ArrowRight
+                    size={16}
+                    className="text-muted-foreground/40 group-hover:text-primary shrink-0 mt-0.5 transition-colors"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <RoomStatusBadge status={tenancy.room.status} />
+                  <EscrowStatusBadge status={tenancy.escrowStatus} />
+                </div>
+
+                <div className="flex justify-between text-xs text-muted-foreground border-t border-border pt-3">
+                  <span>Deposit</span>
+                  <span className="font-semibold text-foreground">
+                    {Number(tenancy.room.depositAmount).toFixed(0)} USDC
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Move-in</span>
+                  <span>{new Date(tenancy.moveInDate).toLocaleDateString()}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }

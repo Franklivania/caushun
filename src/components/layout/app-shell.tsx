@@ -1,15 +1,19 @@
 "use client"
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppSidebar } from "@/components/layout/sidebar-nav"
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar"
 import { DarkModeToggle } from "@/components/layout/dark-mode-toggle"
 import { UserMenu } from "@/components/auth/user-menu"
+import { WalletHydrator } from "@/components/layout/wallet-hydrator"
 import { Separator } from "@/components/ui/separator"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
+    <TooltipProvider delayDuration={0}>
     <SidebarProvider>
+      <WalletHydrator />
       <div className="flex h-screen w-full overflow-hidden">
         {/* Sidebar — hidden on mobile via shadcn sidebar */}
         <AppSidebar />
@@ -35,5 +39,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile bottom tab bar */}
       <MobileTabBar />
     </SidebarProvider>
+    </TooltipProvider>
   )
 }

@@ -2,18 +2,8 @@
 
 import { useState } from "react"
 import { DataTable } from "@/components/data-table/data-table"
-import { roomColumns } from "@/components/landlord/room-columns"
+import { roomColumns, type RoomRow } from "@/components/landlord/room-columns"
 import { RoomDetailSheet } from "@/components/landlord/room-detail-sheet"
-
-type RoomRow = {
-  id: string
-  uniqueCode: string
-  propertyName: string
-  depositAmount: string
-  status: "vacant" | "occupied" | "vacated"
-  escrowStatus: "pending" | "funded" | "active" | "checkout" | "disputed" | "resolved" | null
-  tenantName: string | null
-}
 
 interface RoomsDataTableProps {
   data: RoomRow[]

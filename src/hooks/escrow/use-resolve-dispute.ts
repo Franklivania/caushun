@@ -2,12 +2,11 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ApiResponse } from "@/lib/api-response"
-import type { SendTransactionResponse } from "@/lib/escrow/types"
 
 export interface ResolveParams {
   contractId: string
   tenancyId: string
-  disputeId: string
+  disputeId?: string
   tenantWallet: string
   landlordWallet: string
   depositAmount: number
@@ -15,6 +14,7 @@ export interface ResolveParams {
   tenantPct: number
   adminWallet: string
   resolutionNotes?: string
+  forceResolve?: boolean
 }
 
 export function useResolveDispute() {
@@ -27,9 +27,8 @@ export function useResolveDispute() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       })
-      const json = (await res.json()) as ApiResponse<SendTransactionResponse>
+      const json = (await res.json()) as ApiResponse<null>
       if (json.status === "error") throw new Error(json.message)
-      return json.data
     },
     onSuccess: (_, { contractId, tenancyId }) => {
       queryClient.invalidateQueries({ queryKey: ["escrow", contractId] })

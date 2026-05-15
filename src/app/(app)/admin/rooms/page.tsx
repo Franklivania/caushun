@@ -39,6 +39,9 @@ async function RoomsTable({ page, pageSize }: { page: number; pageSize: number }
       status: r.status,
       escrowStatus: latest?.escrowStatus ?? null,
       tenantName: latest?.tenant?.fullName ?? latest?.tenant?.name ?? null,
+      tenantWallet: latest?.tenant?.walletAddress ?? null,
+      tenancyId: latest?.id ?? null,
+      contractId: latest?.escrowId ?? null,
     }
   })
 
@@ -68,7 +71,7 @@ export default async function AdminRoomsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Rooms" description="All rooms across the platform" />
+      <PageHeader title="Rooms" description="All rooms across the platform" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Rooms" }]} />
       <Suspense fallback={<TableSkeleton columns={7} rows={pageSize} />}>
         <RoomsTable page={page} pageSize={pageSize} />
       </Suspense>

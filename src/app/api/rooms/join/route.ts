@@ -28,13 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(fail("This room is not available."), { status: 409 })
   }
 
-  const existing = await db.query.tenancies.findFirst({
-    where: eq(tenancies.tenantId, session.user.id),
-  })
-  if (existing) {
-    return NextResponse.json(fail("You already have an active tenancy."), { status: 409 })
-  }
-
   const pendingTenancy = await db.query.tenancies.findFirst({
     where: and(eq(tenancies.roomId, room.id), isNull(tenancies.tenantId)),
   })

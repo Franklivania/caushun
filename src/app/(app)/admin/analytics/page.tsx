@@ -54,6 +54,7 @@ export default async function AdminAnalyticsPage() {
       <PageHeader
         title="Analytics"
         description="Platform-wide metrics"
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Analytics" }]}
       />
 
       {/* Stat cards */}

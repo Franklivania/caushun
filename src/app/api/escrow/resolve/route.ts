@@ -6,7 +6,6 @@ import { disputes, tenancies } from "@/db/schema"
 import { fail, ok } from "@/lib/api-response"
 import { sendMail } from "@/lib/mail"
 import { DisputeResolvedEmail } from "@/emails/dispute-resolved"
-import { MILESTONE_INDEX } from "@/lib/constants"
 import { twFetch, twPublicFetch } from "@/lib/escrow/fetch-client"
 import type { SendTransactionResponse, UnsignedTxResponse } from "@/lib/escrow/types"
 import { signWithPlatformWallet } from "@/lib/wallet/platform-signer"
@@ -31,29 +30,32 @@ export async function POST(req: NextRequest) {
     { address: input.landlordWallet, amount: Number((netAmount * ((100 - input.tenantPct) / 100)).toFixed(7)) },
   ].filter((distribution) => distribution.amount > 0)
 
-  try {
-    const data = await twFetch<UnsignedTxResponse>(
-      "/escrow/single-release/resolve-dispute",
-      {
-        method: "POST",
-        body: {
-          contractId: input.contractId,
-          disputeResolver: process.env.PLATFORM_WALLET_PUBLIC_KEY,
-          milestoneIndex: MILESTONE_INDEX,
-          distributions,
-        },
-      }
-    )
-    const signedXdr = signWithPlatformWallet(data.unsignedTransaction)
-    const result = await twPublicFetch<SendTransactionResponse>(
-      "/helper/send-transaction",
-      { method: "POST", body: { signedXdr } }
-    )
+  const twBody = {
+    contractId: input.contractId,
+    disputeResolver: process.env.PLATFORM_WALLET_PUBLIC_KEY,
+    distributions,
+  }
+  console.log("[resolve] TW payload →", JSON.stringify(twBody))
 
-    await db
-      .update(disputes)
-      .set({ platformVerdictPct: input.tenantPct, resolvedAt: new Date() })
-      .where(eq(disputes.id, input.disputeId))
+  try {
+    if (!input.forceResolve) {
+      const data = await twFetch<UnsignedTxResponse>(
+        "/escrow/single-release/resolve-dispute",
+        { method: "POST", body: twBody }
+      )
+      const signedXdr = signWithPlatformWallet(data.unsignedTransaction)
+      await twPublicFetch<SendTransactionResponse>(
+        "/helper/send-transaction",
+        { method: "POST", body: { signedXdr } }
+      )
+    }
+
+    if (input.disputeId) {
+      await db
+        .update(disputes)
+        .set({ platformVerdictPct: input.tenantPct, resolvedAt: new Date() })
+        .where(eq(disputes.id, input.disputeId))
+    }
     await db
       .update(tenancies)
       .set({ escrowStatus: "resolved", resolutionNotes: input.resolutionNotes })
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(ok(result, "Dispute resolved"))
+    return NextResponse.json(ok(null, "Dispute resolved"))
   } catch (error) {
     const message = error instanceof Error ? error.message : "Resolve failed"
     return NextResponse.json(fail(message), { status: 500 })

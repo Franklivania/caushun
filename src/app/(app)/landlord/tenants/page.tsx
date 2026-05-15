@@ -102,6 +102,7 @@ export default async function TenantsPage() {
       <PageHeader
         title="Tenants"
         description="All tenants across your properties"
+        breadcrumbs={[{ label: "Landlord", href: "/landlord" }, { label: "Tenants" }]}
       />
       <Suspense fallback={<TableSkeleton columns={3} rows={8} />}>
         <TenantsList userId={session.user.id} />

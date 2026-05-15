@@ -57,7 +57,7 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="All registered users" />
+      <PageHeader title="Users" description="All registered users" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]} />
       <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>
         <UsersTable page={page} pageSize={pageSize} />
       </Suspense>

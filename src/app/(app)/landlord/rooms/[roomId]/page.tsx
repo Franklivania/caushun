@@ -7,6 +7,10 @@ import { eq } from "drizzle-orm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EscrowStatusBadge, RoomStatusBadge } from "@/components/dashboard/escrow-status-badge"
 import { InviteButton } from "@/components/landlord/invite-button"
+import { DeployEscrowButton } from "@/components/landlord/deploy-escrow-button"
+import { LandlordEscrowActions } from "@/components/landlord/landlord-escrow-actions"
+import { LandlordRoomPhotos } from "@/components/landlord/room-photos"
+import { getPhotosByTenancy } from "@/server/photos"
 import { Button } from "@/components/ui/button"
 import { ExternalLink } from "lucide-react"
 
@@ -38,12 +42,23 @@ export default async function RoomDetailPage({
   const contractId = latestTenancy?.escrowId
   const escrowViewerUrl = process.env.NEXT_PUBLIC_ESCROW_VIEWER_URL
 
+  const [moveInPhotos, moveOutPhotos] = latestTenancy
+    ? await Promise.all([
+        getPhotosByTenancy({ tenancyId: latestTenancy.id, phase: "move_in" }),
+        getPhotosByTenancy({ tenancyId: latestTenancy.id, phase: "move_out" }),
+      ])
+    : [[], []]
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={room.uniqueCode}
         description={`${room.property.name} · ${room.property.address}`}
-        backHref="/landlord/rooms"
+        breadcrumbs={[
+          { label: "Properties", href: "/landlord/properties" },
+          { label: room.property.name, href: `/landlord/properties/${room.property.id}` },
+          { label: room.uniqueCode },
+        ]}
         actions={
           <div className="flex items-center gap-2">
             {contractId && (
@@ -53,6 +68,13 @@ export default async function RoomDetailPage({
                   View escrow
                 </Button>
               </a>
+            )}
+            {!contractId && latestTenancy?.tenant?.walletAddress && (
+              <DeployEscrowButton
+                roomId={room.id}
+                tenancyId={latestTenancy.id}
+                tenantWallet={latestTenancy.tenant.walletAddress}
+              />
             )}
             <InviteButton roomId={room.id} existingToken={room.inviteToken ?? undefined} />
           </div>
@@ -126,6 +148,28 @@ export default async function RoomDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {latestTenancy && (
+        <LandlordRoomPhotos
+          tenancyId={latestTenancy.id}
+          roomCode={room.uniqueCode}
+          uploaderId={session.user.id}
+          escrowStatus={(latestTenancy.escrowStatus ?? "pending") as "pending" | "funded" | "active" | "checkout" | "disputed" | "resolved"}
+          moveInPhotos={moveInPhotos}
+          moveOutPhotos={moveOutPhotos}
+        />
+      )}
+
+      {latestTenancy?.escrowId && latestTenancy.escrowStatus && (
+        <LandlordEscrowActions
+          tenancyId={latestTenancy.id}
+          contractId={latestTenancy.escrowId}
+          escrowStatus={latestTenancy.escrowStatus as "pending" | "funded" | "active" | "checkout" | "disputed" | "resolved"}
+          depositAmount={Number(room.depositAmount)}
+          landlordId={session.user.id}
+          roomCode={room.uniqueCode}
+        />
+      )}
     </div>
   )
 }

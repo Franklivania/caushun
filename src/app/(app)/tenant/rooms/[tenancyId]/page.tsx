@@ -1,56 +1,45 @@
 import { auth } from "@/auth"
-import { redirect } from "next/navigation"
+import { redirect, notFound } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
-import { db } from "@/db"
-import { tenancies } from "@/db/schema"
-import { eq, desc } from "drizzle-orm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RoomStatusBadge, EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
-import { BedDouble, ExternalLink } from "lucide-react"
+import { EscrowActions } from "@/components/tenant/escrow-actions"
+import { RoomCondition } from "@/components/tenant/room-condition"
 import { Button } from "@/components/ui/button"
-import { JoinRoomDialog } from "@/components/tenant/join-room-dialog"
+import { ExternalLink } from "lucide-react"
+import { getTenancyById } from "@/server/tenancies"
 
-export default async function TenantRoomPage() {
+export default async function TenantRoomDetailPage({
+  params,
+}: {
+  params: Promise<{ tenancyId: string }>
+}) {
   const session = await auth()
   if (!session?.user?.id) redirect("/auth")
 
-  const tenancy = await db.query.tenancies.findFirst({
-    where: eq(tenancies.tenantId, session.user.id),
-    orderBy: [desc(tenancies.createdAt)],
-    with: {
-      room: { with: { property: { with: { landlord: true } } } },
-      tenant: true,
-    },
-  })
+  const { tenancyId } = await params
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!UUID_RE.test(tenancyId)) notFound()
 
-  if (!tenancy) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="My Room" description="Your current tenancy details" />
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-          <div className="flex items-center justify-center size-14 rounded-xl bg-primary/10">
-            <BedDouble size={24} className="text-primary" />
-          </div>
-          <div>
-            <p className="font-semibold text-base">No room assigned yet</p>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Enter the room code your landlord shared with you to get started.
-            </p>
-          </div>
-          <JoinRoomDialog />
-        </div>
-      </div>
-    )
-  }
+  const tenancy = await getTenancyById(tenancyId)
+  if (!tenancy || tenancy.tenantId !== session.user.id) notFound()
 
   const { room } = tenancy
   const escrowViewerUrl = process.env.NEXT_PUBLIC_ESCROW_VIEWER_URL
+
+  const moveInPhotos = tenancy.photos.filter((p) => p.phase === "move_in")
+  const hasMoveInPhotos = moveInPhotos.length > 0
+  const moveInAcknowledged = moveInPhotos.some((p) => p.acknowledgedAt !== null)
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={room.uniqueCode}
         description={`${room.property.name} · ${room.property.address}`}
+        breadcrumbs={[
+          { label: "My Rooms", href: "/tenant" },
+          { label: room.uniqueCode },
+        ]}
         actions={
           tenancy.escrowId ? (
             <a
@@ -159,6 +148,27 @@ export default async function TenantRoomPage() {
           </CardContent>
         </Card>
       </div>
+
+      <RoomCondition
+        tenancyId={tenancy.id}
+        photos={moveInPhotos}
+        escrowStatus={tenancy.escrowStatus}
+      />
+
+      <EscrowActions
+        tenancyId={tenancy.id}
+        contractId={tenancy.escrowId}
+        escrowStatus={tenancy.escrowStatus}
+        depositAmount={Number(room.depositAmount)}
+        tenantWallet={tenancy.tenant?.walletAddress ?? null}
+        landlordWallet={room.property.landlord?.walletAddress ?? null}
+        roomCode={room.uniqueCode}
+        moveInDate={tenancy.moveInDate?.toISOString() ?? null}
+        tenantId={session.user.id}
+        roomStatus={room.status}
+        hasMoveInPhotos={hasMoveInPhotos}
+        moveInAcknowledged={moveInAcknowledged}
+      />
     </div>
   )
 }

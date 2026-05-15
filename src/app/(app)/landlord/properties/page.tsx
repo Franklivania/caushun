@@ -54,6 +54,7 @@ export default async function PropertiesPage({
       <PageHeader
         title="Properties"
         description="Manage your rental properties"
+        breadcrumbs={[{ label: "Landlord", href: "/landlord" }, { label: "Properties" }]}
         actions={<CreatePropertyDialog />}
       />
       <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>

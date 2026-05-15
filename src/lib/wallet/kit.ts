@@ -33,6 +33,10 @@ export async function signTransaction({
     import("@creit.tech/stellar-wallets-kit"),
     getWalletKit(),
   ])
+  // Ensure site has Freighter permission before signing.
+  // If already authorized this resolves immediately (no extra popup).
+  // If not, this shows the access request so Confirm is no longer greyed out.
+  await kit.getAddress()
   const { signedTxXdr } = await kit.signTransaction(unsignedTransaction, {
     address,
     networkPassphrase: Networks.TESTNET,

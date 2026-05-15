@@ -19,6 +19,7 @@ export function DarkModeToggle() {
     setDark(next)
     localStorage.setItem("caushun-theme", next ? "dark" : "light")
     document.getElementById("app-root")?.classList.toggle("dark", next)
+    document.documentElement.classList.toggle("dark", next)
   }
 
   return (

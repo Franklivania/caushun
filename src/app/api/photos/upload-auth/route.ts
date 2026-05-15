@@ -11,7 +11,7 @@ export async function GET() {
     const { token, expire, signature } = getUploadAuthParams({
       privateKey,
       publicKey,
-      expire: 30 * 60,
+      expire: Math.floor(Date.now() / 1000) + 30 * 60,
     })
 
     return NextResponse.json(

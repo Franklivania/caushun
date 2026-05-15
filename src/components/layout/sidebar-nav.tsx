@@ -12,11 +12,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Home, Building2, BedDouble, Users, BarChart2, User, FileText, Wallet, AlertCircle, Settings } from "lucide-react"
+import { Home, Building2, BedDouble, Users, BarChart2, User, Wallet, AlertCircle, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSession } from "next-auth/react"
 
@@ -28,8 +29,7 @@ const landlordNav = [
 ]
 
 const tenantNav = [
-  { label: "Overview", href: "/tenant", icon: Home, exact: true },
-  { label: "My Room", href: "/tenant/room", icon: BedDouble },
+  { label: "My Rooms", href: "/tenant", icon: BedDouble, exact: true },
   { label: "Escrow", href: "/tenant/escrow", icon: Wallet },
 ]
 
@@ -38,8 +38,6 @@ const adminNav = [
   { label: "Analytics", href: "/admin/analytics", icon: BarChart2 },
   { label: "Users", href: "/admin/users", icon: User },
   { label: "Properties", href: "/admin/properties", icon: Building2 },
-  { label: "Rooms", href: "/admin/rooms", icon: BedDouble },
-  { label: "Tenancies", href: "/admin/tenancies", icon: FileText },
   { label: "Disputes", href: "/admin/disputes", icon: AlertCircle },
 ]
 
@@ -54,7 +52,7 @@ function NavItems({ items }: { items: typeof landlordNav }) {
           : pathname.startsWith(item.href)
         return (
           <SidebarMenuItem key={item.href}>
-            <SidebarMenuButton asChild isActive={active} className={cn(
+            <SidebarMenuButton asChild isActive={active} tooltip={item.label} className={cn(
               "h-9 gap-3 rounded-lg transition-all",
               active
                 ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold border-l-2 border-sidebar-primary -ml-px pl-[13px]"
@@ -115,8 +113,8 @@ export function AppSidebar() {
   const settingsActive = pathname.startsWith("/settings")
 
   return (
-    <Sidebar>
-      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-14 flex items-center px-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-lg font-black tracking-tight text-sidebar-primary">Caushun</span>
         </Link>
@@ -135,7 +133,7 @@ export function AppSidebar() {
         {/* Settings link */}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={settingsActive} className={cn(
+            <SidebarMenuButton asChild isActive={settingsActive} tooltip="Settings" className={cn(
               "h-9 gap-3 rounded-lg transition-all",
               settingsActive
                 ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold border-l-2 border-sidebar-primary -ml-px pl-[13px]"
@@ -150,14 +148,14 @@ export function AppSidebar() {
         </SidebarMenu>
 
         {/* User card */}
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <Avatar className="w-8 h-8 shrink-0">
             <AvatarImage src={session?.user?.image ?? ""} />
             <AvatarFallback className="text-xs font-bold bg-sidebar-accent text-sidebar-accent-foreground">
               {session?.user?.name?.[0] ?? "U"}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="text-xs font-semibold truncate text-sidebar-foreground">
               {session?.user?.fullName || session?.user?.name || "User"}
             </p>
@@ -170,7 +168,7 @@ export function AppSidebar() {
           <Badge
             variant="outline"
             className={cn(
-              "text-[9px] uppercase shrink-0 border-sidebar-border font-semibold",
+              "text-[9px] uppercase shrink-0 border-sidebar-border font-semibold group-data-[collapsible=icon]:hidden",
               role === "admin" && "border-amber-500/40 text-amber-400"
             )}
           >
@@ -178,6 +176,7 @@ export function AppSidebar() {
           </Badge>
         </div>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

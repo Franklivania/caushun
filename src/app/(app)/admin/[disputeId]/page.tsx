@@ -37,7 +37,7 @@ export default async function AdminDisputePage({
       <PageHeader
         title="Resolve dispute"
         description={`Room ${dispute.tenancy.room.uniqueCode} · ${dispute.reason}`}
-        backHref="/admin/disputes"
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Disputes", href: "/admin/disputes" }, { label: "Resolve" }]}
         actions={
           <a
             href={`${escrowViewerUrl}/${dispute.tenancy.escrowId}`}

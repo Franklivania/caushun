@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       receiver: tenantWallet,
     },
     amount: Number(room.depositAmount),
-    platformFee: PLATFORM_FEE_PCT,
+    platformFee: PLATFORM_FEE_PCT / 100,
     trustline: { address: usdcIssuer, symbol: "USDC" },
     milestones: [{ description: "Checkout complete - refund requested" }],
   }

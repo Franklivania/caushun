@@ -60,13 +60,16 @@ function buildUrl(base: string, params?: Record<string, string>): string {
 async function readTwError(res: Response): Promise<string> {
   const fallback = `TW API error ${res.status}`
   const err = await res.json().catch(() => ({ message: fallback }))
+  console.error("[TW API error]", res.status, res.url, JSON.stringify(err))
   if (
     typeof err === "object" &&
     err !== null &&
     "message" in err &&
     typeof err.message === "string"
   ) {
-    return err.message
+    const detail =
+      "errors" in err ? ` — ${JSON.stringify(err.errors)}` : ""
+    return `${err.message}${detail}`
   }
   return fallback
 }

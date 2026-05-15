@@ -31,7 +31,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Manage your profile and wallet." />
+      <PageHeader title="Settings" description="Manage your profile and wallet." breadcrumbs={[{ label: "Settings" }]} />
       <SettingsClient user={user} />
     </div>
   )

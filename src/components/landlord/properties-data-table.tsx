@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { DataTable } from "@/components/data-table/data-table"
 import { propertyColumns } from "@/components/landlord/property-columns"
-import { PropertyDetailSheet } from "@/components/landlord/property-detail-sheet"
 
 type PropertyRow = {
   id: string
@@ -23,20 +22,17 @@ interface PropertiesDataTableProps {
 }
 
 export function PropertiesDataTable({ data, page, pageSize, pageCount, total }: PropertiesDataTableProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const router = useRouter()
 
   return (
-    <>
-      <DataTable
-        columns={propertyColumns}
-        data={data}
-        page={page}
-        pageSize={pageSize}
-        pageCount={pageCount}
-        total={total}
-        onRowClick={(row) => setSelectedId(row.id)}
-      />
-      <PropertyDetailSheet propertyId={selectedId} onClose={() => setSelectedId(null)} />
-    </>
+    <DataTable
+      columns={propertyColumns}
+      data={data}
+      page={page}
+      pageSize={pageSize}
+      pageCount={pageCount}
+      total={total}
+      onRowClick={(row) => router.push(`/landlord/properties/${row.id}`)}
+    />
   )
 }

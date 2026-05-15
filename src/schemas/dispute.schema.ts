@@ -11,7 +11,7 @@ export const disputeSchema = z.object({
 export const resolveDisputeSchema = z.object({
   contractId: z.string().min(1),
   tenancyId: uuidSchema,
-  disputeId: uuidSchema,
+  disputeId: uuidSchema.optional(),
   tenantWallet: walletAddressSchema,
   landlordWallet: walletAddressSchema,
   depositAmount: z.number().positive(),
@@ -19,4 +19,5 @@ export const resolveDisputeSchema = z.object({
   tenantPct: z.number().min(0).max(100).int(),
   adminWallet: walletAddressSchema,
   resolutionNotes: z.string().trim().optional(),
+  forceResolve: z.boolean().optional().default(false),
 })

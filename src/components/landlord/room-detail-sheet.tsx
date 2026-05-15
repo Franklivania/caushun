@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RoomStatusBadge, EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
 import { BedDouble, CalendarDays, Coins, ExternalLink, Copy, Link2 } from "lucide-react"
+import { DeployEscrowButton } from "@/components/landlord/deploy-escrow-button"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
@@ -160,7 +161,7 @@ export function RoomDetailSheet({ roomId, onClose }: RoomDetailSheetProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-2">
+            <div className="w-full flex flex-col gap-4 mt-auto p-4">
               {escrowViewerUrl && (
                 <Button variant="outline" size="sm" className="w-full gap-2" asChild>
                   <a href={escrowViewerUrl} target="_blank" rel="noopener noreferrer">
@@ -168,6 +169,14 @@ export function RoomDetailSheet({ roomId, onClose }: RoomDetailSheetProps) {
                     View on Escrow Explorer
                   </a>
                 </Button>
+              )}
+              {!tenancy?.escrowId && tenancy?.tenant?.walletAddress && roomId && (
+                <DeployEscrowButton
+                  roomId={roomId}
+                  tenancyId={tenancy.id}
+                  tenantWallet={tenancy.tenant.walletAddress}
+                  className="w-full"
+                />
               )}
               <Button
                 variant="outline"

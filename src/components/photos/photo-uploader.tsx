@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { useCallback, useRef, useState } from "react"
 import { uploadPhotos, type PhotoPhase } from "@/lib/imagekit/upload"
 import { savePhotos } from "@/server/photos"
+import { toast } from "sonner"
 
 interface PhotoUploaderProps {
   tenancyId: string
@@ -82,6 +83,10 @@ export function PhotoUploader({
       setProgress(0)
       abortControllerRef.current = new AbortController()
 
+      const toastId = toast.loading(
+        `Uploading ${files.length} photo${files.length === 1 ? "" : "s"}…`
+      )
+
       try {
         const urls = await uploadPhotos({
           files,
@@ -96,9 +101,12 @@ export function PhotoUploader({
         const all = [...uploadedUrls, ...urls]
         setUploadedUrls(all)
         onUploaded(all)
+        toast.success(`${urls.length} photo${urls.length === 1 ? "" : "s"} saved`, { id: toastId })
       } catch (err: unknown) {
         setPreviews((prev) => prev.slice(0, prev.length - files.length))
-        setError(err instanceof Error ? err.message : "Upload failed. Please try again.")
+        const msg = err instanceof Error ? err.message : "Upload failed. Please try again."
+        setError(msg)
+        toast.error(msg, { id: toastId })
       } finally {
         setUploading(false)
         setProgress(0)
@@ -193,7 +201,7 @@ export function PhotoUploader({
               key={src}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="group relative aspect-[4/3] overflow-hidden rounded-md bg-ash/20"
+              className="group relative aspect-4/3 overflow-hidden rounded-md bg-ash/20"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={`${PHASE_LABELS[phase]} ${index + 1}`} className="h-full w-full object-cover" />

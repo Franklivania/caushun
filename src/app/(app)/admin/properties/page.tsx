@@ -1,75 +1,74 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
-import { DataTable } from "@/components/data-table/data-table"
-import { TableSkeleton } from "@/components/skeletons/table-skeleton"
-import { propertyColumns } from "@/components/landlord/property-columns"
-import { Suspense } from "react"
 import { db } from "@/db"
-import { properties, rooms } from "@/db/schema"
-import { count, desc, eq } from "drizzle-orm"
+import { disputes } from "@/db/schema"
+import { isNull } from "drizzle-orm"
+import { AdminPropertiesTable, type PropertyRow } from "@/components/admin/admin-properties-table"
 
-async function PropertiesTable({ page, pageSize }: { page: number; pageSize: number }) {
-  const offset = (page - 1) * pageSize
+export default async function AdminPropertiesPage() {
+  const session = await auth()
+  if (!session?.user?.id) redirect("/auth")
 
-  const [[{ total }], data] = await Promise.all([
-    db.select({ total: count() }).from(properties),
+  const [allProperties, openDisputes] = await Promise.all([
     db.query.properties.findMany({
-      orderBy: [desc(properties.createdAt)],
-      limit: pageSize,
-      offset,
+      with: {
+        landlord: true,
+        rooms: {
+          with: {
+            tenancies: {
+              orderBy: (t, { desc }) => [desc(t.createdAt)],
+              limit: 1,
+              with: { tenant: true },
+            },
+          },
+        },
+      },
+    }),
+    db.query.disputes.findMany({
+      where: isNull(disputes.resolvedAt),
+      with: { tenancy: { with: { room: true } } },
     }),
   ])
 
-  const propertyIds = data.map((p) => p.id)
-  const roomCounts =
-    propertyIds.length > 0
-      ? await Promise.all(
-          propertyIds.map((id) =>
-            db.select({ count: count() }).from(rooms).where(eq(rooms.propertyId, id))
-          )
-        )
-      : []
+  const disputeCountByProperty = openDisputes.reduce<Record<string, number>>((acc, d) => {
+    const pid = d.tenancy.room.propertyId
+    acc[pid] = (acc[pid] ?? 0) + 1
+    return acc
+  }, {})
 
-  const rows = data.map((p, i) => ({
+  const rows: PropertyRow[] = allProperties.map((p) => ({
     id: p.id,
     name: p.name,
     address: p.address,
     state: p.state,
-    roomCount: roomCounts[i]?.[0]?.count ?? 0,
-    createdAt: p.createdAt,
+    landlordId: p.landlordId,
+    landlordName: p.landlord?.fullName ?? p.landlord?.name ?? "—",
+    landlordWallet: p.landlord?.walletAddress ?? null,
+    totalRooms: p.rooms.length,
+    occupiedRooms: p.rooms.filter((r) => r.status === "occupied").length,
+    escrowVolume: p.rooms.reduce((sum, r) => sum + Number(r.depositAmount), 0),
+    openDisputes: disputeCountByProperty[p.id] ?? 0,
+    rooms: p.rooms.map((r) => ({
+      id: r.id,
+      uniqueCode: r.uniqueCode,
+      roomNumber: r.roomNumber,
+      status: r.status,
+      depositAmount: Number(r.depositAmount),
+      tenantName:
+        r.tenancies[0]?.tenant?.fullName ?? r.tenancies[0]?.tenant?.name ?? null,
+      escrowStatus: r.tenancies[0]?.escrowStatus ?? null,
+    })),
   }))
 
   return (
-    <DataTable
-      columns={propertyColumns}
-      data={rows}
-      page={page}
-      pageSize={pageSize}
-      pageCount={Math.ceil(total / pageSize)}
-      total={total}
-    />
-  )
-}
-
-export default async function AdminPropertiesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; pageSize?: string }>
-}) {
-  const session = await auth()
-  if (!session?.user?.id) redirect("/auth")
-
-  const sp = await searchParams
-  const page = Math.max(1, Number(sp.page ?? 1))
-  const pageSize = Math.min(50, Math.max(1, Number(sp.pageSize ?? 10)))
-
-  return (
     <div className="space-y-6">
-      <PageHeader title="Properties" description="All properties across the platform" />
-      <Suspense fallback={<TableSkeleton columns={5} rows={pageSize} />}>
-        <PropertiesTable page={page} pageSize={pageSize} />
-      </Suspense>
+      <PageHeader
+        title="Properties"
+        description="All landlord properties across the platform"
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Properties" }]}
+      />
+      <AdminPropertiesTable rows={rows} />
     </div>
   )
 }

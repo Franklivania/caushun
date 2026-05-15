@@ -3,15 +3,17 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye } from "lucide-react"
 import Link from "next/link"
+import { ArrowRight } from "lucide-react"
 
 export interface DisputeRow {
-  id: string
+  tenancyId: string
+  disputeId: string | null
   roomCode: string
+  propertyName: string
   reason: string
   tenantName: string | null
-  landlordWallet: string | null
+  landlordName: string | null
   raisedAt: Date
   resolved: boolean
 }
@@ -20,20 +22,30 @@ export const disputeColumns: ColumnDef<DisputeRow>[] = [
   {
     accessorKey: "roomCode",
     header: "Room",
-    cell: ({ getValue }) => (
-      <span className="font-mono text-sm">{getValue<string>()}</span>
+    cell: ({ row }) => (
+      <div>
+        <span className="font-mono text-sm">{row.original.roomCode}</span>
+        <p className="text-xs text-muted-foreground">{row.original.propertyName}</p>
+      </div>
     ),
   },
   {
     accessorKey: "reason",
     header: "Reason",
     cell: ({ getValue }) => (
-      <span className="text-sm line-clamp-2 max-w-[300px]">{getValue<string>()}</span>
+      <span className="text-sm line-clamp-2 max-w-[280px]">{getValue<string>()}</span>
     ),
   },
   {
     accessorKey: "tenantName",
     header: "Tenant",
+    cell: ({ getValue }) => (
+      <span className="text-sm">{getValue<string | null>() ?? "—"}</span>
+    ),
+  },
+  {
+    accessorKey: "landlordName",
+    header: "Landlord",
     cell: ({ getValue }) => (
       <span className="text-sm">{getValue<string | null>() ?? "—"}</span>
     ),
@@ -66,9 +78,10 @@ export const disputeColumns: ColumnDef<DisputeRow>[] = [
   {
     id: "actions",
     cell: ({ row }) => (
-      <Link href={`/admin/${row.original.id}`}>
-        <Button variant="ghost" size="icon" className="size-8">
-          <Eye size={14} />
+      <Link href={`/admin/disputes/resolve/${row.original.tenancyId}`}>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+          Resolve
+          <ArrowRight size={12} />
         </Button>
       </Link>
     ),

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,8 +10,10 @@ import { useFundEscrow } from "@/hooks/escrow/use-fund-escrow"
 import { useCheckout } from "@/hooks/escrow/use-checkout"
 import { useDisputeEscrow } from "@/hooks/escrow/use-dispute-escrow"
 import { useSetTrustline } from "@/hooks/escrow/use-set-trustline"
+import { useVacateRoom } from "@/hooks/tenancy/use-vacate-room"
 import { toast } from "sonner"
-import { ExternalLink, Wallet, LogOut, AlertTriangle, Shield, RefreshCw } from "lucide-react"
+import { PhotoUploader } from "@/components/photos/photo-uploader"
+import { ExternalLink, Wallet, LogOut, AlertTriangle, Shield, RefreshCw, DoorOpen } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +37,10 @@ interface EscrowActionsProps {
   landlordWallet: string | null
   roomCode: string
   moveInDate: string | null
+  tenantId: string
+  roomStatus: string
+  hasMoveInPhotos?: boolean
+  moveInAcknowledged?: boolean
 }
 
 const escrowViewerBase = process.env.NEXT_PUBLIC_ESCROW_VIEWER_URL ?? "https://viewer.trustlesswork.com"
@@ -47,13 +54,20 @@ export function EscrowActions({
   landlordWallet,
   roomCode,
   moveInDate,
+  tenantId,
+  roomStatus,
+  hasMoveInPhotos = false,
+  moveInAcknowledged = false,
 }: EscrowActionsProps) {
+  const router = useRouter()
   const [disputeReason, setDisputeReason] = useState("")
+  const [moveOutPhotos, setMoveOutPhotos] = useState<string[]>([])
 
   const { mutate: fundEscrow, isPending: funding } = useFundEscrow()
   const { mutate: checkout, isPending: checkingOut } = useCheckout()
   const { mutate: disputeEscrow, isPending: disputing } = useDisputeEscrow()
   const { mutate: setTrustline, isPending: settingTrustline } = useSetTrustline()
+  const { mutate: vacateRoom, isPending: vacating } = useVacateRoom()
 
   const truncate = (addr: string | null) =>
     addr ? `${addr.slice(0, 8)}…${addr.slice(-4)}` : "Not set"
@@ -63,11 +77,12 @@ export function EscrowActions({
       toast.error("Missing contract or wallet")
       return
     }
+    const id = toast.loading("Funding escrow…")
     fundEscrow(
       { contractId, tenantWallet, amount: depositAmount, tenancyId },
       {
-        onSuccess: () => toast.success("Escrow funded"),
-        onError: (e) => toast.error(e.message),
+        onSuccess: () => { toast.success("Escrow funded", { id }); router.refresh() },
+        onError: (e) => toast.error(e.message, { id }),
       }
     )
   }
@@ -77,11 +92,12 @@ export function EscrowActions({
       toast.error("Missing contract or wallet")
       return
     }
+    const id = toast.loading("Requesting checkout…")
     checkout(
-      { contractId, tenantWallet, moveOutPhotoUrls: [], tenantPct: 100, tenancyId },
+      { contractId, tenantWallet, moveOutPhotoUrls: moveOutPhotos, tenantPct: 100, tenancyId },
       {
-        onSuccess: () => toast.success("Checkout requested"),
-        onError: (e) => toast.error(e.message),
+        onSuccess: () => { toast.success("Checkout requested", { id }); router.refresh() },
+        onError: (e) => toast.error(e.message, { id }),
       }
     )
   }
@@ -91,14 +107,16 @@ export function EscrowActions({
       toast.error("Missing contract or wallet")
       return
     }
+    const id = toast.loading("Raising dispute…")
     disputeEscrow(
       { contractId, signerWallet: tenantWallet, tenancyId, reason: disputeReason },
       {
         onSuccess: () => {
-          toast.success("Dispute raised")
+          toast.success("Dispute raised", { id })
           setDisputeReason("")
+          router.refresh()
         },
-        onError: (e) => toast.error(e.message),
+        onError: (e) => toast.error(e.message, { id }),
       }
     )
   }
@@ -108,11 +126,12 @@ export function EscrowActions({
       toast.error("Connect your wallet first")
       return
     }
+    const id = toast.loading("Setting USDC trustline…")
     setTrustline(
       { signer: tenantWallet },
       {
-        onSuccess: () => toast.success("USDC trustline set"),
-        onError: (e) => toast.error(e.message),
+        onSuccess: () => { toast.success("USDC trustline set", { id }); router.refresh() },
+        onError: (e) => toast.error(e.message, { id }),
       }
     )
   }
@@ -195,12 +214,18 @@ export function EscrowActions({
               <Button
                 size="sm"
                 onClick={handleFund}
-                disabled={funding || !contractId}
+                disabled={funding || !contractId || (hasMoveInPhotos && !moveInAcknowledged)}
                 className="gap-2"
+                title={hasMoveInPhotos && !moveInAcknowledged ? "Acknowledge the room condition above before funding" : undefined}
               >
                 <Wallet size={14} />
                 {funding ? "Funding…" : `Fund ${depositAmount.toFixed(0)} USDC`}
               </Button>
+              {hasMoveInPhotos && !moveInAcknowledged && (
+                <p className="text-xs text-amber-400 mt-1">
+                  Acknowledge the room condition above before funding.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -226,21 +251,30 @@ export function EscrowActions({
                     Request checkout
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-lg">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Request checkout?</AlertDialogTitle>
+                    <AlertDialogTitle>Request checkout</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This notifies your landlord that you are ready to move out. They will review
-                      and release your deposit. This cannot be undone.
+                      Upload photos of the room as you&apos;re leaving. Match the same angles as
+                      the move-in photos — these are compared side by side if a dispute is raised.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
+                  <div className="px-6 pb-2">
+                    <PhotoUploader
+                      tenancyId={tenancyId}
+                      roomCode={roomCode}
+                      phase="move_out"
+                      uploaderId={tenantId}
+                      onUploaded={setMoveOutPhotos}
+                    />
+                  </div>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleCheckout}
-                      disabled={checkingOut}
+                      disabled={checkingOut || moveOutPhotos.length === 0}
                     >
-                      {checkingOut ? "Requesting…" : "Request checkout"}
+                      {checkingOut ? "Requesting…" : "Submit checkout"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -315,17 +349,67 @@ export function EscrowActions({
       )}
 
       {escrowStatus === "resolved" && (
-        <Card className="border-border">
-          <CardContent className="py-6 flex items-center gap-3">
-            <Shield size={18} className="text-emerald-400 shrink-0" />
-            <div>
-              <p className="text-sm font-medium">Escrow resolved</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Funds have been released. This tenancy is now complete.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        roomStatus === "vacated" ? (
+          <Card className="border-border">
+            <CardContent className="py-6 flex items-center gap-3">
+              <DoorOpen size={18} className="text-emerald-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Room vacated</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  You have formally vacated this room. This tenancy is complete.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-border">
+            <CardContent className="py-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Shield size={18} className="text-emerald-400 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Escrow resolved</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Funds have been released. Formally vacate to complete this tenancy.
+                  </p>
+                </div>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" className="gap-2 w-full">
+                    <DoorOpen size={14} />
+                    Vacate room
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Vacate this room?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This marks your tenancy as complete and records today as your move-out date.
+                      The room will be listed as vacant for the landlord.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={vacating}
+                      onClick={() =>
+                        vacateRoom(tenancyId, {
+                          onSuccess: () => {
+                            toast.success("Room vacated")
+                            router.refresh()
+                          },
+                          onError: (e) => toast.error(e.message),
+                        })
+                      }
+                    >
+                      {vacating ? "Vacating…" : "Confirm vacate"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+        )
       )}
     </div>
   )

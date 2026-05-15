@@ -1,13 +1,13 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useStartDispute, useSendTransaction } from "@trustless-work/escrow"
+import { useSendTransaction } from "@trustless-work/escrow"
 import { humanizeEscrowError } from "@/lib/escrow/errors"
 import { signTransaction } from "@/lib/wallet/kit"
+import type { ApiResponse } from "@/lib/api-response"
 
 export function useDisputeEscrow() {
   const queryClient = useQueryClient()
-  const { startDispute } = useStartDispute()
   const { sendTransaction } = useSendTransaction()
 
   return useMutation({
@@ -17,12 +17,21 @@ export function useDisputeEscrow() {
       tenancyId: string
       reason?: string
     }) => {
-      const { unsignedTransaction } = await startDispute({
-        contractId: input.contractId,
-        signer: input.signerWallet,
-      }, "single-release")
-      if (!unsignedTransaction) throw new Error(humanizeEscrowError("No unsigned transaction returned"))
+      // Use the API route so milestoneIndex: "0" is included and dispute record is created
+      const res = await fetch("/api/escrow/dispute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractId: input.contractId,
+          signerWallet: input.signerWallet,
+          tenancyId: input.tenancyId,
+          reason: input.reason ?? "Dispute raised via platform",
+        }),
+      })
+      const json = (await res.json()) as ApiResponse<{ unsignedTransaction: string }>
+      if (json.status === "error") throw new Error(humanizeEscrowError(json.message))
 
+      const { unsignedTransaction } = json.data
       const signedXdr = await signTransaction({ unsignedTransaction, address: input.signerWallet })
       const result = await sendTransaction(signedXdr)
 

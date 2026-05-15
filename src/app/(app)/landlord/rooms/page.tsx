@@ -51,6 +51,9 @@ async function RoomsTable({ userId, page, pageSize }: { userId: string; page: nu
       status: r.status,
       escrowStatus: latest?.escrowStatus ?? null,
       tenantName: latest?.tenant?.fullName ?? latest?.tenant?.name ?? null,
+      tenantWallet: latest?.tenant?.walletAddress ?? null,
+      tenancyId: latest?.id ?? null,
+      contractId: latest?.escrowId ?? null,
     }
   })
 
@@ -82,6 +85,7 @@ export default async function RoomsPage({
       <PageHeader
         title="Rooms"
         description="All rooms across your properties"
+        breadcrumbs={[{ label: "Landlord", href: "/landlord" }, { label: "Rooms" }]}
       />
       <Suspense fallback={<TableSkeleton columns={7} rows={pageSize} />}>
         <RoomsTable userId={session.user.id} page={page} pageSize={pageSize} />

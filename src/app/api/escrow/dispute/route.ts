@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { fail, ok } from "@/lib/api-response"
-import { MILESTONE_INDEX } from "@/lib/constants"
 import { twFetch } from "@/lib/escrow/fetch-client"
 import type { DisputeEscrowPayload, UnsignedTxResponse } from "@/lib/escrow/types"
 import { disputeSchema } from "@/schemas/dispute.schema"
@@ -16,9 +15,10 @@ export async function POST(req: NextRequest) {
 
   const payload: DisputeEscrowPayload = {
     contractId: parsed.data.contractId,
-    milestoneIndex: MILESTONE_INDEX,
     signer: parsed.data.signerWallet,
   }
+
+  console.log("[dispute] TW payload →", JSON.stringify(payload))
 
   try {
     const data = await twFetch<UnsignedTxResponse>(

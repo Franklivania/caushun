@@ -18,13 +18,15 @@ export function ResolveDisputeForm({
 }: {
   contractId: string
   tenancyId: string
-  disputeId: string
+  disputeId?: string
   tenantWallet: string
   landlordWallet: string
   depositAmount: number
   adminWallet: string
 }) {
   const [tenantPct, setTenantPct] = useState(100)
+  const [notes, setNotes] = useState("")
+  const [forceResolve, setForceResolve] = useState(false)
   const resolve = useResolveDispute()
 
   const net = depositAmount * (1 - PLATFORM_FEE_PCT / 100)
@@ -43,6 +45,8 @@ export function ResolveDisputeForm({
         platformFeePct: PLATFORM_FEE_PCT,
         tenantPct,
         adminWallet,
+        resolutionNotes: notes.trim() || undefined,
+        forceResolve,
       },
       {
         onSuccess: () => toast.success("Dispute resolved"),
@@ -89,6 +93,29 @@ export function ResolveDisputeForm({
             </p>
           </div>
         </div>
+
+        <div>
+          <label className="text-sm font-medium block mb-2">Resolution notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Summarise your decision for the parties…"
+            rows={3}
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+          />
+        </div>
+
+        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={forceResolve}
+            onChange={(e) => setForceResolve(e.target.checked)}
+            className="rounded accent-primary"
+          />
+          <span className="text-xs text-muted-foreground">
+            Skip on-chain call (for broken escrows — DB only)
+          </span>
+        </label>
 
         <Button
           className="w-full"

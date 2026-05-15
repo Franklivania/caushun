@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { Suspense } from "react"
 import { db } from "@/db"
 import { users, properties, tenancies, disputes } from "@/db/schema"
-import { eq, count, desc, isNull } from "drizzle-orm"
+import { eq, count, desc } from "drizzle-orm"
 import { Card, CardContent } from "@/components/ui/card"
 import { EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
 import { StatCardSkeleton } from "@/components/skeletons/stat-card-skeleton"
@@ -23,8 +23,8 @@ async function AdminStats() {
     db.select({ total: count() }).from(tenancies).where(
       eq(tenancies.escrowStatus, "funded")
     ),
-    db.select({ total: count() }).from(disputes).where(
-      isNull(disputes.resolvedAt)
+    db.select({ total: count() }).from(tenancies).where(
+      eq(tenancies.escrowStatus, "disputed")
     ),
   ])
 
@@ -86,7 +86,7 @@ async function RecentDisputes() {
           {recentDisputes.map((dispute) => (
             <Link
               key={dispute.id}
-              href={`/admin/${dispute.id}`}
+              href={`/admin/disputes/resolve/${dispute.tenancy.id}`}
               className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors"
             >
               <div className="flex-1 min-w-0">
@@ -121,6 +121,7 @@ export default async function AdminPage() {
       <PageHeader
         title="Admin"
         description="Platform overview and dispute management"
+        breadcrumbs={[{ label: "Admin" }, { label: "Overview" }]}
       />
       <Suspense fallback={<StatCardSkeleton count={4} />}>
         <AdminStats />

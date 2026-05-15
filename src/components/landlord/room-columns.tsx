@@ -1,10 +1,18 @@
 "use client"
 
+import { useState } from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Eye, Trash2, Link2, Copy } from "lucide-react"
+import { MoreHorizontal, Eye, Trash2, Link2, Rocket, ExternalLink, Copy, CheckCircle, DoorOpen } from "lucide-react"
 import { EscrowStatusBadge, RoomStatusBadge } from "@/components/dashboard/escrow-status-badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,12 +22,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { useDeployEscrow } from "@/hooks/escrow/use-deploy-escrow"
+import { useApproveMilestone } from "@/hooks/escrow/use-approve-milestone"
+import { useWallet } from "@/hooks/wallet/use-wallet"
 
-type RoomRow = {
+export type RoomRow = {
   id: string
   uniqueCode: string
   propertyName: string
@@ -27,13 +37,90 @@ type RoomRow = {
   status: "vacant" | "occupied" | "vacated"
   escrowStatus: "pending" | "funded" | "active" | "checkout" | "disputed" | "resolved" | null
   tenantName: string | null
+  tenantWallet: string | null
+  tenancyId: string | null
+  contractId: string | null
 }
 
-function DeleteRoomAction({ id }: { id: string }) {
+function RoomActionsDropdown({ row }: { row: RoomRow }) {
   const router = useRouter()
+  const { address, connect, isConnected } = useWallet()
+  const { mutate: deploy, isPending: deploying } = useDeployEscrow()
+  const { mutate: approve, isPending: approving } = useApproveMilestone()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [inviting, setInviting] = useState(false)
+
+  const canDeploy = !row.contractId && !!row.tenantWallet && !!row.tenancyId
+  const canApprove = row.escrowStatus === "checkout" && !!row.contractId && !!row.tenancyId
+  const escrowViewerUrl = process.env.NEXT_PUBLIC_ESCROW_VIEWER_URL
+
+  async function handleInvite() {
+    setInviting(true)
+    try {
+      const res = await fetch(`/api/rooms/${row.id}/invite`, { method: "POST" })
+      const json = await res.json()
+      if (json.status === "error") { toast.error(json.message); return }
+      await navigator.clipboard.writeText(json.data.inviteUrl)
+      toast.success("Invite link copied to clipboard")
+    } catch {
+      toast.error("Failed to generate invite")
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  async function handleApprove() {
+    const walletAddress = address ?? await connect("landlord")
+    const id = toast.loading("Preparing approval…")
+    approve(
+      {
+        contractId: row.contractId!,
+        landlordWallet: walletAddress,
+        tenancyId: row.tenancyId!,
+        onProgress: (msg) => toast.loading(msg, { id }),
+      },
+      {
+        onSuccess: () => { toast.success("Checkout approved — deposit released to tenant", { id }); router.refresh() },
+        onError: (e) => toast.error(e.message, { id }),
+      }
+    )
+  }
+
+  async function handleDeploy() {
+    const walletAddress = address ?? await connect("landlord")
+    const id = toast.loading("Building transaction…")
+    deploy(
+      {
+        landlordWallet: walletAddress,
+        tenantWallet: row.tenantWallet!,
+        roomId: row.id,
+        tenancyId: row.tenancyId!,
+        onProgress: (msg) => toast.loading(msg, { id }),
+      },
+      {
+        onSuccess: () => { toast.success("Escrow deployed — tenant can now fund", { id }); router.refresh() },
+        onError: (e) => toast.error(e.message, { id }),
+      }
+    )
+  }
+
+  async function handleMarkVacant() {
+    const res = await fetch(`/api/rooms/${row.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "vacant" }),
+    })
+    const json = await res.json()
+    if (json.status === "error") {
+      toast.error(json.message)
+    } else {
+      toast.success("Room marked as vacant")
+      router.refresh()
+    }
+  }
 
   async function handleDelete() {
-    const res = await fetch(`/api/rooms/${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/rooms/${row.id}`, { method: "DELETE" })
     const json = await res.json()
     if (json.status === "error") {
       toast.error(json.message)
@@ -44,27 +131,74 @@ function DeleteRoomAction({ id }: { id: string }) {
   }
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-          <Trash2 size={14} />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete room?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will delete the room and all associated tenancy records.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal size={14} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href={`/landlord/rooms/${row.id}`} className="flex items-center gap-2">
+              <Eye size={14} /> View
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleInvite} disabled={inviting} className="gap-2">
+            <Link2 size={14} />
+            {inviting ? "Generating…" : "Generate invite link"}
+          </DropdownMenuItem>
+          {canDeploy && (
+            <DropdownMenuItem onClick={handleDeploy} disabled={deploying} className="gap-2">
+              <Rocket size={14} />
+              {deploying ? "Deploying…" : !isConnected ? "Connect & deploy escrow" : "Deploy escrow"}
+            </DropdownMenuItem>
+          )}
+          {canApprove && (
+            <DropdownMenuItem onClick={handleApprove} disabled={approving} className="gap-2">
+              <CheckCircle size={14} />
+              {approving ? "Approving…" : "Approve checkout"}
+            </DropdownMenuItem>
+          )}
+          {row.contractId && escrowViewerUrl && (
+            <DropdownMenuItem asChild>
+              <a href={`${escrowViewerUrl}/${row.contractId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <ExternalLink size={14} /> View escrow
+              </a>
+            </DropdownMenuItem>
+          )}
+          {row.status === "vacated" && (
+            <DropdownMenuItem onClick={handleMarkVacant} className="gap-2">
+              <DoorOpen size={14} /> Mark as vacant
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2 text-destructive focus:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 size={14} /> Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete room?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the room and all associated tenancy records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
@@ -130,18 +264,8 @@ export const roomColumns: ColumnDef<RoomRow>[] = [
     id: "actions",
     header: "",
     cell: ({ row }) => (
-      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-        <Link href={`/landlord/rooms/${row.original.id}`}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-            <Eye size={14} />
-          </Button>
-        </Link>
-        <Link href={`/landlord/rooms/${row.original.id}?invite=1`}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Generate invite link">
-            <Link2 size={14} />
-          </Button>
-        </Link>
-        <DeleteRoomAction id={row.original.id} />
+      <div onClick={(e) => e.stopPropagation()}>
+        <RoomActionsDropdown row={row.original} />
       </div>
     ),
   },
