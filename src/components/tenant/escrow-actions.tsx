@@ -13,7 +13,7 @@ import { useSetTrustline } from "@/hooks/escrow/use-set-trustline"
 import { useVacateRoom } from "@/hooks/tenancy/use-vacate-room"
 import { toast } from "sonner"
 import { PhotoUploader } from "@/components/photos/photo-uploader"
-import { ExternalLink, Wallet, LogOut, AlertTriangle, Shield, RefreshCw, DoorOpen } from "lucide-react"
+import { ExternalLink, Wallet, LogOut, AlertTriangle, Shield, RefreshCw, DoorOpen, Clock } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -231,7 +231,22 @@ export function EscrowActions({
         </Card>
       )}
 
-      {(escrowStatus === "funded" || escrowStatus === "active") && (
+      {escrowStatus === "active" && (
+        <Card className="border-border">
+          <CardContent className="py-6 flex items-center gap-3">
+            <Clock size={18} className="text-amber-400 shrink-0 animate-pulse" />
+            <div>
+              <p className="text-sm font-medium">Checkout approved</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your landlord approved checkout. The platform is releasing your funds — this may take
+                a moment.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {escrowStatus === "funded" && (
         <Card className="border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -392,15 +407,16 @@ export function EscrowActions({
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       disabled={vacating}
-                      onClick={() =>
+                      onClick={() => {
+                        const id = toast.loading("Vacating room…")
                         vacateRoom(tenancyId, {
                           onSuccess: () => {
-                            toast.success("Room vacated")
+                            toast.success("Room vacated successfully", { id })
                             router.refresh()
                           },
-                          onError: (e) => toast.error(e.message),
+                          onError: (e) => toast.error(e.message, { id }),
                         })
-                      }
+                      }}
                     >
                       {vacating ? "Vacating…" : "Confirm vacate"}
                     </AlertDialogAction>

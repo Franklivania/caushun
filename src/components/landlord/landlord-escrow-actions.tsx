@@ -10,7 +10,7 @@ import { useApproveMilestone } from "@/hooks/escrow/use-approve-milestone"
 import { useDisputeEscrow } from "@/hooks/escrow/use-dispute-escrow"
 import { useWallet } from "@/hooks/wallet/use-wallet"
 import { toast } from "sonner"
-import { CheckCircle, AlertTriangle } from "lucide-react"
+import { CheckCircle, AlertTriangle, Clock } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,6 +87,54 @@ export function LandlordEscrowActions({
   }
 
   if (escrowStatus === "pending" || escrowStatus === "resolved") return null
+
+  // Active = on-chain approved but release didn't complete — landlord can retry
+  if (escrowStatus === "active") {
+    return (
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Landlord actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3 py-1">
+            <Clock size={18} className="text-amber-400 shrink-0 animate-pulse" />
+            <div>
+              <p className="text-sm font-medium">Approval done — release pending</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The on-chain approval succeeded but funds weren&apos;t released yet. Tap below to
+                complete the release.
+              </p>
+            </div>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" className="gap-2" disabled={approving}>
+                <CheckCircle size={14} />
+                {approving ? "Releasing…" : "Release funds"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Release funds?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The on-chain approval is already recorded. This will release the{" "}
+                  {depositAmount.toFixed(0)} USDC deposit back to the tenant.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleApprove} disabled={approving}>
+                  {approving ? "Releasing…" : "Release"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="border-border">
@@ -178,7 +226,7 @@ export function LandlordEscrowActions({
           </>
         )}
 
-        {(escrowStatus === "funded" || escrowStatus === "active") && (
+        {escrowStatus === "funded" && (
           <>
             <p className="text-sm text-muted-foreground">
               The escrow is active. You can raise a dispute if there is an issue with the tenancy.

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PLATFORM_FEE_PCT } from "@/lib/constants"
@@ -24,6 +25,7 @@ export function ResolveDisputeForm({
   depositAmount: number
   adminWallet: string
 }) {
+  const router = useRouter()
   const [tenantPct, setTenantPct] = useState(100)
   const [notes, setNotes] = useState("")
   const [forceResolve, setForceResolve] = useState(false)
@@ -49,7 +51,10 @@ export function ResolveDisputeForm({
         forceResolve,
       },
       {
-        onSuccess: () => toast.success("Dispute resolved"),
+        onSuccess: () => {
+            toast.success("Dispute resolved")
+            router.refresh()
+          },
         onError: (e) => toast.error(e.message),
       }
     )

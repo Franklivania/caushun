@@ -51,7 +51,8 @@ function RoomActionsDropdown({ row }: { row: RoomRow }) {
   const [inviting, setInviting] = useState(false)
 
   const canDeploy = !row.contractId && !!row.tenantWallet && !!row.tenancyId
-  const canApprove = row.escrowStatus === "checkout" && !!row.contractId && !!row.tenancyId
+  // "active" = on-chain approved but release not yet completed — allow retry
+  const canApprove = (row.escrowStatus === "checkout" || row.escrowStatus === "active") && !!row.contractId && !!row.tenancyId
   const escrowViewerUrl = process.env.NEXT_PUBLIC_ESCROW_VIEWER_URL
 
   async function handleInvite() {
@@ -157,7 +158,11 @@ function RoomActionsDropdown({ row }: { row: RoomRow }) {
           {canApprove && (
             <DropdownMenuItem onClick={handleApprove} disabled={approving} className="gap-2">
               <CheckCircle size={14} />
-              {approving ? "Approving…" : "Approve checkout"}
+              {approving
+                ? "Releasing…"
+                : row.escrowStatus === "active"
+                  ? "Release funds"
+                  : "Approve checkout"}
             </DropdownMenuItem>
           )}
           {row.contractId && escrowViewerUrl && (

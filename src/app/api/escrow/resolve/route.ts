@@ -6,7 +6,7 @@ import { disputes, tenancies } from "@/db/schema"
 import { fail, ok } from "@/lib/api-response"
 import { sendMail } from "@/lib/mail"
 import { DisputeResolvedEmail } from "@/emails/dispute-resolved"
-import { twFetch, twPublicFetch } from "@/lib/escrow/fetch-client"
+import { twFetch } from "@/lib/escrow/fetch-client"
 import type { SendTransactionResponse, UnsignedTxResponse } from "@/lib/escrow/types"
 import { signWithPlatformWallet } from "@/lib/wallet/platform-signer"
 import { resolveDisputeSchema } from "@/schemas/dispute.schema"
@@ -24,11 +24,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(fail("Unauthorized"), { status: 403 })
   }
 
-  const netAmount = input.depositAmount * (1 - input.platformFeePct / 100)
   const distributions = [
-    { address: input.tenantWallet, amount: Number((netAmount * (input.tenantPct / 100)).toFixed(7)) },
-    { address: input.landlordWallet, amount: Number((netAmount * ((100 - input.tenantPct) / 100)).toFixed(7)) },
+    { address: input.tenantWallet, amount: Number((input.depositAmount * (input.tenantPct / 100)).toFixed(7)) },
+    { address: input.landlordWallet, amount: Number((input.depositAmount * ((100 - input.tenantPct) / 100)).toFixed(7)) },
   ].filter((distribution) => distribution.amount > 0)
+
+  // netAmount used only for email display — actual payout after platform fee
+  const netAmount = input.depositAmount * (1 - input.platformFeePct / 100)
 
   const twBody = {
     contractId: input.contractId,
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
         { method: "POST", body: twBody }
       )
       const signedXdr = signWithPlatformWallet(data.unsignedTransaction)
-      await twPublicFetch<SendTransactionResponse>(
+      await twFetch<SendTransactionResponse>(
         "/helper/send-transaction",
         { method: "POST", body: { signedXdr } }
       )

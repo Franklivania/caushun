@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
 import { db } from "@/db"
 import { tenancies } from "@/db/schema"
-import { and, eq, desc, not } from "drizzle-orm"
+import { eq, desc } from "drizzle-orm"
 import { Wallet } from "lucide-react"
 import { EscrowActions } from "@/components/tenant/escrow-actions"
 import { RoomCondition } from "@/components/tenant/room-condition"
@@ -15,10 +15,7 @@ export default async function TenantEscrowPage() {
   if (!session?.user?.id) redirect("/auth")
 
   const tenancy = await db.query.tenancies.findFirst({
-    where: and(
-      eq(tenancies.tenantId, session.user.id),
-      not(eq(tenancies.escrowStatus, "resolved"))
-    ),
+    where: eq(tenancies.tenantId, session.user.id),
     orderBy: [desc(tenancies.createdAt)],
     with: {
       room: { with: { property: { with: { landlord: true } } } },
@@ -26,7 +23,11 @@ export default async function TenantEscrowPage() {
     },
   })
 
-  if (!tenancy) {
+  // Fully complete = resolved AND physically vacated — treat as no active tenancy
+  const isFullyComplete =
+    !!tenancy && tenancy.escrowStatus === "resolved" && tenancy.room.status === "vacated"
+
+  if (!tenancy || isFullyComplete) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -39,12 +40,16 @@ export default async function TenantEscrowPage() {
             <Wallet size={24} className="text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-base">No active escrow</p>
+            <p className="font-semibold text-base">
+              {isFullyComplete ? "Tenancy complete" : "No active escrow"}
+            </p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Join a room first using the invite link your landlord shared with you.
+              {isFullyComplete
+                ? "Your last tenancy has been fully resolved and vacated."
+                : "Join a room first using the invite link your landlord shared with you."}
             </p>
           </div>
-          <JoinRoomDialog />
+          {!isFullyComplete && <JoinRoomDialog />}
         </div>
       </div>
     )

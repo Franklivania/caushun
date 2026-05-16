@@ -4,7 +4,7 @@ import { auth } from "@/auth"
 import { db } from "@/db"
 import { tenancies } from "@/db/schema"
 import { fail, ok } from "@/lib/api-response"
-import { twFetch, twPublicFetch } from "@/lib/escrow/fetch-client"
+import { twFetch } from "@/lib/escrow/fetch-client"
 import type { SendTransactionResponse, UnsignedTxResponse } from "@/lib/escrow/types"
 import { signWithPlatformWallet } from "@/lib/wallet/platform-signer"
 import { z } from "zod"
@@ -32,23 +32,41 @@ export async function POST(req: NextRequest) {
   if (tenancy.escrowStatus !== "checkout" && tenancy.escrowStatus !== "active")
     return NextResponse.json(fail("Tenancy is not in checkout state"), { status: 409 })
 
+  const platformWallet = process.env.PLATFORM_WALLET_PUBLIC_KEY
+  const platformSecret = process.env.PLATFORM_WALLET_SECRET_KEY
+  if (!platformWallet || !platformSecret) {
+    console.error("[complete-checkout] Missing platform wallet env vars", {
+      hasPlatformWallet: !!platformWallet,
+      hasPlatformSecret: !!platformSecret,
+    })
+    return NextResponse.json(fail("Platform wallet is not configured"), { status: 500 })
+  }
+
   try {
+    // Step 1: get unsigned release XDR from TW
+    // console.log("[complete-checkout] using API key prefix:", process.env.TW_API_KEY?.slice(0, 8))
     const data = await twFetch<UnsignedTxResponse>(
       "/escrow/single-release/release-funds",
       {
         method: "POST",
-        body: {
-          contractId,
-          releaseSigner: process.env.PLATFORM_WALLET_PUBLIC_KEY,
-        },
+        body: { contractId, releaseSigner: platformWallet },
       }
     )
+
+    // Step 2: sign with platform wallet
     const signedXdr = signWithPlatformWallet(data.unsignedTransaction)
-    await twPublicFetch<SendTransactionResponse>(
+
+    // Step 3: broadcast to Stellar — check result explicitly
+    const sendResult = await twFetch<SendTransactionResponse>(
       "/helper/send-transaction",
       { method: "POST", body: { signedXdr } }
     )
+    if (sendResult.status === "FAILED") {
+      console.error("[complete-checkout] send-transaction FAILED", sendResult)
+      throw new Error(sendResult.message ?? "Transaction was rejected by the network")
+    }
 
+    // Step 4: mark resolved in DB
     await db
       .update(tenancies)
       .set({ escrowStatus: "resolved" })
@@ -57,6 +75,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(ok(null, "Checkout complete — funds released"))
   } catch (error) {
     const message = error instanceof Error ? error.message : "Release failed"
+    console.error("[complete-checkout] error:", message)
     return NextResponse.json(fail(message), { status: 500 })
   }
 }
