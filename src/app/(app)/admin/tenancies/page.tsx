@@ -5,6 +5,7 @@ import { DataTable } from "@/components/data-table/data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import { tenancyColumns } from "@/components/admin/tenancy-columns"
 import { Suspense } from "react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { db } from "@/db"
 import { tenancies } from "@/db/schema"
 import { count, desc } from "drizzle-orm"
@@ -61,7 +62,7 @@ export default async function AdminTenanciesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Tenancies" description="All room tenancies across the platform" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Tenancies" }]} />
+      <PageHeader title="Tenancies" description="All room tenancies across the platform" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Tenancies" }]} actions={<RefreshButton />} />
       <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>
         <TenanciesTable page={page} pageSize={pageSize} />
       </Suspense>

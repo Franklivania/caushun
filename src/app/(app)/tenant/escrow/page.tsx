@@ -9,6 +9,7 @@ import { EscrowActions } from "@/components/tenant/escrow-actions"
 import { RoomCondition } from "@/components/tenant/room-condition"
 import { JoinRoomDialog } from "@/components/tenant/join-room-dialog"
 import { getPhotosByTenancy } from "@/server/photos"
+import { RefreshButton } from "@/components/layout/refresh-button"
 
 export default async function TenantEscrowPage() {
   const session = await auth()
@@ -34,6 +35,7 @@ export default async function TenantEscrowPage() {
           title="Escrow"
           description="Your security deposit escrow"
           breadcrumbs={[{ label: "Tenant", href: "/tenant" }, { label: "Escrow" }]}
+          actions={<RefreshButton />}
         />
         <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
           <div className="flex items-center justify-center size-14 rounded-xl bg-primary/10">
@@ -65,6 +67,7 @@ export default async function TenantEscrowPage() {
         title="Escrow"
         description={`Deposit for room ${tenancy.room.uniqueCode}`}
         breadcrumbs={[{ label: "Tenant", href: "/tenant" }, { label: "Escrow" }]}
+        actions={<RefreshButton />}
       />
       <RoomCondition
         tenancyId={tenancy.id}

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { PropertiesDataTable } from "@/components/landlord/properties-data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import { CreatePropertyDialog } from "@/components/landlord/create-property-dialog"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { Suspense } from "react"
 import { db } from "@/db"
 import { properties } from "@/db/schema"
@@ -55,7 +56,7 @@ export default async function PropertiesPage({
         title="Properties"
         description="Manage your rental properties"
         breadcrumbs={[{ label: "Landlord", href: "/landlord" }, { label: "Properties" }]}
-        actions={<CreatePropertyDialog />}
+        actions={<><RefreshButton /><CreatePropertyDialog /></>}
       />
       <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>
         <PropertiesTable userId={session.user.id} page={page} pageSize={pageSize} />

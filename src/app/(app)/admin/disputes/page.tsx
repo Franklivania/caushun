@@ -5,6 +5,7 @@ import { DataTable } from "@/components/data-table/data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import { disputeColumns, type DisputeRow } from "@/components/admin/dispute-columns"
 import { Suspense } from "react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { db } from "@/db"
 import { tenancies } from "@/db/schema"
 import { eq, desc } from "drizzle-orm"
@@ -70,6 +71,7 @@ export default async function AdminDisputesPage({
         title="Disputes"
         description="All disputed tenancies — click Resolve to mediate"
         breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Disputes" }]}
+        actions={<RefreshButton />}
       />
       <Suspense fallback={<TableSkeleton columns={7} rows={pageSize} />}>
         <DisputesTable page={page} pageSize={pageSize} />

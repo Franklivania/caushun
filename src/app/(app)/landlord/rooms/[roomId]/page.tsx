@@ -168,6 +168,7 @@ export default async function RoomDetailPage({
           depositAmount={Number(room.depositAmount)}
           landlordId={session.user.id}
           roomCode={room.uniqueCode}
+          roomStatus={room.status}
         />
       )}
     </div>

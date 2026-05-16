@@ -5,6 +5,7 @@ import { DataTable } from "@/components/data-table/data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import { userColumns } from "@/components/admin/user-columns"
 import { Suspense } from "react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { count, desc } from "drizzle-orm"
@@ -57,7 +58,7 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="All registered users" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]} />
+      <PageHeader title="Users" description="All registered users" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]} actions={<RefreshButton />} />
       <Suspense fallback={<TableSkeleton columns={6} rows={pageSize} />}>
         <UsersTable page={page} pageSize={pageSize} />
       </Suspense>

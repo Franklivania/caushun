@@ -7,6 +7,7 @@ import { db } from "@/db"
 import { users, properties, rooms, tenancies, disputes } from "@/db/schema"
 import { count, isNull, sql } from "drizzle-orm"
 import { Users, Building2, BedDouble, FileText, AlertTriangle } from "lucide-react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 
 export default async function AdminAnalyticsPage() {
   const session = await auth()
@@ -55,6 +56,7 @@ export default async function AdminAnalyticsPage() {
         title="Analytics"
         description="Platform-wide metrics"
         breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Analytics" }]}
+        actions={<RefreshButton />}
       />
 
       {/* Stat cards */}

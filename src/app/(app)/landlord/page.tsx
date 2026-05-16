@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { StatCardSkeleton } from "@/components/skeletons/stat-card-skeleton"
 import { Building2, BedDouble, Users, Wallet, Plus } from "lucide-react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { Suspense } from "react"
 import { db } from "@/db"
 import { properties, rooms, tenancies } from "@/db/schema"
@@ -106,12 +107,15 @@ export default async function LandlordOverviewPage() {
         description="Your properties and escrow snapshot"
         breadcrumbs={[{ label: "Landlord" }, { label: "Overview" }]}
         actions={
-          <Link href="/landlord/properties">
-            <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus size={15} />
-              Add property
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <RefreshButton />
+            <Link href="/landlord/properties">
+              <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={15} />
+                Add property
+              </Button>
+            </Link>
+          </div>
         }
       />
 

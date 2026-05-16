@@ -66,6 +66,10 @@ export function CreateRoomDialog({ propertyId }: { propertyId?: string }) {
     if (!nextOpen) setSelectedPropertyId("")
   }
 
+  function closeDialog() {
+    handleOpenChange(false)
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!resolvedPropertyId) return
@@ -86,7 +90,7 @@ export function CreateRoomDialog({ propertyId }: { propertyId?: string }) {
         toast.error(json.message)
       } else {
         toast.success("Room created")
-        setOpen(false)
+        closeDialog()
         router.refresh()
       }
     } finally {
@@ -158,7 +162,7 @@ export function CreateRoomDialog({ propertyId }: { propertyId?: string }) {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !resolvedPropertyId}>

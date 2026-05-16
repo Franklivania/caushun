@@ -10,6 +10,7 @@ import { EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
 import { StatCardSkeleton } from "@/components/skeletons/stat-card-skeleton"
 import Link from "next/link"
 import { Users, Building2, Shield, AlertTriangle } from "lucide-react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 
 async function AdminStats() {
   const [
@@ -122,6 +123,7 @@ export default async function AdminPage() {
         title="Admin"
         description="Platform overview and dispute management"
         breadcrumbs={[{ label: "Admin" }, { label: "Overview" }]}
+        actions={<RefreshButton />}
       />
       <Suspense fallback={<StatCardSkeleton count={4} />}>
         <AdminStats />

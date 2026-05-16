@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EscrowStatusBadge } from "@/components/dashboard/escrow-status-badge"
 import Link from "next/link"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
+import { RefreshButton } from "@/components/layout/refresh-button"
 
 async function TenantsList({ userId }: { userId: string }) {
   const landlordProperties = await db
@@ -103,6 +104,7 @@ export default async function TenantsPage() {
         title="Tenants"
         description="All tenants across your properties"
         breadcrumbs={[{ label: "Landlord", href: "/landlord" }, { label: "Tenants" }]}
+        actions={<RefreshButton />}
       />
       <Suspense fallback={<TableSkeleton columns={3} rows={8} />}>
         <TenantsList userId={session.user.id} />

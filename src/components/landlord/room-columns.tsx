@@ -120,6 +120,19 @@ function RoomActionsDropdown({ row }: { row: RoomRow }) {
     }
   }
 
+  async function handleForceEvict() {
+    if (!row.tenancyId) return
+    const id = toast.loading("Evicting tenant…")
+    const res = await fetch(`/api/tenancies/${row.tenancyId}/force-evict`, { method: "POST" })
+    const json = await res.json()
+    if (json.status === "error") {
+      toast.error(json.message, { id })
+    } else {
+      toast.success("Room is now vacant", { id })
+      router.refresh()
+    }
+  }
+
   async function handleDelete() {
     const res = await fetch(`/api/rooms/${row.id}`, { method: "DELETE" })
     const json = await res.json()
@@ -175,6 +188,14 @@ function RoomActionsDropdown({ row }: { row: RoomRow }) {
           {row.status === "vacated" && (
             <DropdownMenuItem onClick={handleMarkVacant} className="gap-2">
               <DoorOpen size={14} /> Mark as vacant
+            </DropdownMenuItem>
+          )}
+          {row.escrowStatus === "resolved" && row.status !== "vacant" && !!row.tenancyId && (
+            <DropdownMenuItem
+              onClick={handleForceEvict}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <DoorOpen size={14} /> Force evict tenant
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />

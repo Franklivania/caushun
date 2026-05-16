@@ -9,6 +9,7 @@ import { RoomStatusBadge, EscrowStatusBadge } from "@/components/dashboard/escro
 import { BedDouble, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { JoinRoomDialog } from "@/components/tenant/join-room-dialog"
+import { RefreshButton } from "@/components/layout/refresh-button"
 
 export default async function TenantPage() {
   const session = await auth()
@@ -29,7 +30,7 @@ export default async function TenantPage() {
           title="My Rooms"
           description="All rooms you are or have been a tenant in"
           breadcrumbs={[{ label: "Tenant" }, { label: "My Rooms" }]}
-          actions={<JoinRoomDialog />}
+          actions={<><RefreshButton /><JoinRoomDialog /></>}
         />
         <Card className="border-border">
           <CardContent className="py-16 text-center">
@@ -55,7 +56,7 @@ export default async function TenantPage() {
         title="My Rooms"
         description="All rooms you are or have been a tenant in"
         breadcrumbs={[{ label: "Tenant" }, { label: "My Rooms" }]}
-        actions={<JoinRoomDialog />}
+        actions={<><RefreshButton /><JoinRoomDialog /></>}
       />
 
       <div className="grid sm:grid-cols-3 gap-4">

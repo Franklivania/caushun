@@ -8,9 +8,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { PhotoUploader } from "@/components/photos/photo-uploader"
 import { useApproveMilestone } from "@/hooks/escrow/use-approve-milestone"
 import { useDisputeEscrow } from "@/hooks/escrow/use-dispute-escrow"
+import { useForceEvict } from "@/hooks/tenancy/use-force-evict"
 import { useWallet } from "@/hooks/wallet/use-wallet"
 import { toast } from "sonner"
-import { CheckCircle, AlertTriangle, Clock } from "lucide-react"
+import { CheckCircle, AlertTriangle, Clock, DoorOpen, Shield } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ interface LandlordEscrowActionsProps {
   depositAmount: number
   landlordId: string
   roomCode: string
+  roomStatus: string
 }
 
 export function LandlordEscrowActions({
@@ -41,11 +43,13 @@ export function LandlordEscrowActions({
   depositAmount,
   landlordId,
   roomCode,
+  roomStatus,
 }: LandlordEscrowActionsProps) {
   const router = useRouter()
   const { address, connect } = useWallet()
   const { mutate: approve, isPending: approving } = useApproveMilestone()
   const { mutate: dispute, isPending: disputing } = useDisputeEscrow()
+  const { mutate: forceEvict, isPending: evicting } = useForceEvict()
   const [disputeReason, setDisputeReason] = useState("")
   const [damagePhotos, setDamagePhotos] = useState<string[]>([])
 
@@ -86,7 +90,87 @@ export function LandlordEscrowActions({
     )
   }
 
-  if (escrowStatus === "pending" || escrowStatus === "resolved") return null
+  if (escrowStatus === "pending") return null
+
+  if (escrowStatus === "resolved") {
+    if (roomStatus === "vacant") {
+      return (
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Landlord actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3 py-1">
+            <Shield size={18} className="text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Room is vacant</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Escrow resolved and room is ready for a new tenant.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )
+    }
+
+    return (
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Landlord actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3 py-1">
+            <Shield size={18} className="text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Escrow resolved</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                All funds have been released. Force evict to reclaim this room and make it available for a new tenant.
+              </p>
+            </div>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" className="gap-2" disabled={evicting}>
+                <DoorOpen size={14} />
+                {evicting ? "Evicting…" : "Force evict tenant"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Force evict tenant?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This marks the room as vacant immediately. The escrow is already resolved so all
+                  financial obligations are settled. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={evicting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    const id = toast.loading("Evicting tenant…")
+                    forceEvict(tenancyId, {
+                      onSuccess: () => {
+                        toast.success("Room is now vacant", { id })
+                        router.refresh()
+                      },
+                      onError: (e) => toast.error(e.message, { id }),
+                    })
+                  }}
+                >
+                  {evicting ? "Evicting…" : "Confirm eviction"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+    )
+  }
 
   // Active = on-chain approved but release didn't complete — landlord can retry
   if (escrowStatus === "active") {

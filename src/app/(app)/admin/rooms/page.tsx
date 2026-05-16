@@ -5,6 +5,7 @@ import { DataTable } from "@/components/data-table/data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import { roomColumns } from "@/components/landlord/room-columns"
 import { Suspense } from "react"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { db } from "@/db"
 import { rooms } from "@/db/schema"
 import { count, desc } from "drizzle-orm"
@@ -71,7 +72,7 @@ export default async function AdminRoomsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Rooms" description="All rooms across the platform" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Rooms" }]} />
+      <PageHeader title="Rooms" description="All rooms across the platform" breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Rooms" }]} actions={<RefreshButton />} />
       <Suspense fallback={<TableSkeleton columns={7} rows={pageSize} />}>
         <RoomsTable page={page} pageSize={pageSize} />
       </Suspense>

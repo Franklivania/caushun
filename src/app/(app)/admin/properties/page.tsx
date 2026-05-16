@@ -5,6 +5,7 @@ import { db } from "@/db"
 import { disputes } from "@/db/schema"
 import { isNull } from "drizzle-orm"
 import { AdminPropertiesTable, type PropertyRow } from "@/components/admin/admin-properties-table"
+import { RefreshButton } from "@/components/layout/refresh-button"
 
 export default async function AdminPropertiesPage() {
   const session = await auth()
@@ -67,6 +68,7 @@ export default async function AdminPropertiesPage() {
         title="Properties"
         description="All landlord properties across the platform"
         breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Properties" }]}
+        actions={<RefreshButton />}
       />
       <AdminPropertiesTable rows={rows} />
     </div>

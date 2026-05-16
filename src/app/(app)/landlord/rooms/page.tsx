@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { RoomsDataTable } from "@/components/landlord/rooms-data-table"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import { CreateRoomDialog } from "@/components/landlord/create-room-dialog"
+import { RefreshButton } from "@/components/layout/refresh-button"
 import { Suspense } from "react"
 import { db } from "@/db"
 import { properties, rooms } from "@/db/schema"
@@ -87,7 +88,7 @@ export default async function RoomsPage({
         title="Rooms"
         description="All rooms across your properties"
         breadcrumbs={[{ label: "Landlord", href: "/landlord" }, { label: "Rooms" }]}
-        actions={<CreateRoomDialog />}
+        actions={<><RefreshButton /><CreateRoomDialog /></>}
       />
       <Suspense fallback={<TableSkeleton columns={7} rows={pageSize} />}>
         <RoomsTable userId={session.user.id} page={page} pageSize={pageSize} />
