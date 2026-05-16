@@ -1,5 +1,5 @@
 export function humanizeEscrowError(message: string): string {
-  const map: Record<string, string> = {
+  const exact: Record<string, string> = {
     "Only the approver can change milestone flag":
       "Only the landlord can approve this checkout.",
     "Only the service provider can change milestone status":
@@ -12,9 +12,21 @@ export function humanizeEscrowError(message: string): string {
     "Only the dispute resolver can execute this function":
       "Disputes can only be resolved by the Caushun platform.",
     "You cannot approve a milestone that has already been approved previously":
-      "This checkout has already been approved.",
+      "This checkout has already been approved — funds will be released shortly.",
     "Escrow already initialized": "An escrow already exists for this room.",
     "Amount cannot be zero": "Deposit amount must be greater than zero.",
+    "Validation failed": "The transaction was rejected by the network. Please refresh and try again.",
   }
-  return map[message] ?? `Transaction failed: ${message}. Please try again.`
+
+  if (exact[message]) return exact[message]
+
+  // Partial / SDK-level patterns
+  if (message.includes("status code 400")) return "This action was rejected. Please refresh and try again."
+  if (message.includes("status code 5")) return "The server encountered an error. Please try again in a moment."
+  if (message.includes("User declined") || message.includes("user rejected"))
+    return "You cancelled the wallet request."
+  if (message.includes("Network Error") || message.includes("Failed to fetch"))
+    return "Network error — check your connection and try again."
+
+  return "Something went wrong. Please refresh and try again."
 }

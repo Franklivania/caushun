@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query"
 import type { ApiResponse } from "@/lib/api-response"
 import { twPublicFetch } from "@/lib/escrow/fetch-client"
 import type { SendTransactionResponse } from "@/lib/escrow/types"
+import { humanizeEscrowError } from "@/lib/escrow/errors"
 import { signTransaction } from "@/lib/wallet/kit"
 
 export function useSetTrustline() {
@@ -15,7 +16,7 @@ export function useSetTrustline() {
         body: JSON.stringify({ signer }),
       })
       const json = (await res.json()) as ApiResponse<{ unsignedTransaction: string | null }>
-      if (json.status === "error") throw new Error(json.message)
+      if (json.status === "error") throw new Error(humanizeEscrowError(json.message))
       // null means trustline is already set — nothing to sign
       if (!json.data.unsignedTransaction) return
 

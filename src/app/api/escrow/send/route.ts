@@ -14,7 +14,7 @@ const statusMap = {
   deploy: "pending",
   fund: "funded",
   checkout: "checkout",
-  approve: "checkout",
+  approve: "active",
   dispute: "disputed",
 } as const
 
